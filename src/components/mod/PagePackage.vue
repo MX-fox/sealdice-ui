@@ -1021,6 +1021,7 @@ const storeMaxPageCount = ref(1);
 type StoreView = 'all' | 'recommend';
 const storeView = ref<StoreView>('all');
 let storeListRequestId = 0;
+let storeListRequestView: StoreView = 'all';
 const storeInstallPreviewVisible = ref(false);
 const storeInstallPreviewLoading = ref(false);
 const storeInstallPreviewTarget = ref<StorePackage | null>(null);
@@ -1991,14 +1992,20 @@ const buildStoreQuery = () => {
   return query;
 };
 
+const resetStorePagination = () => {
+  storeQuery.pageNum = 1;
+  storeMaxPageCount.value = 1;
+};
+
 const beginStoreListRequest = () => {
   const requestId = ++storeListRequestId;
+  storeListRequestView = storeView.value;
   storeLoading.value = true;
   return requestId;
 };
 
-const isCurrentStoreListRequest = (requestId: number, view: StoreView) =>
-  requestId === storeListRequestId && storeView.value === view;
+const isCurrentStoreListRequest = (requestId: number) =>
+  requestId === storeListRequestId && storeView.value === storeListRequestView;
 
 const finishStoreListRequest = (requestId: number) => {
   if (requestId === storeListRequestId) {
@@ -2012,7 +2019,7 @@ const loadStorePage = async (resetKnownPages = false): Promise<void> => {
   const requestId = beginStoreListRequest();
   try {
     const response = await getStorePage(query);
-    if (!isCurrentStoreListRequest(requestId, 'all')) {
+    if (!isCurrentStoreListRequest(requestId)) {
       return;
     }
     if (!response.result) {
@@ -2042,7 +2049,7 @@ const loadStoreRecommend = async () => {
   const requestId = beginStoreListRequest();
   try {
     const response = await getStoreRecommend();
-    if (!isCurrentStoreListRequest(requestId, 'recommend')) {
+    if (!isCurrentStoreListRequest(requestId)) {
       return;
     }
     if (!response.result) {
@@ -2060,15 +2067,13 @@ const handleStoreViewChange = async (view: string | number | boolean | undefined
   if (view === 'recommend') {
     await loadStoreRecommend();
   } else {
-    storeQuery.pageNum = 1;
-    storeMaxPageCount.value = 1;
+    resetStorePagination();
     await loadStorePage();
   }
 };
 
 const handleStoreSearch = async () => {
-  storeQuery.pageNum = 1;
-  storeMaxPageCount.value = 1;
+  resetStorePagination();
   await loadStorePage();
 };
 
